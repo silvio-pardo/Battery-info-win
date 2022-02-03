@@ -1,0 +1,16 @@
+{
+  "name": "battery-info-win",
+  "version": "1.0.0",
+  "description": "Retrieve a list of battery info from win32 api",
+  "main": "lib/binding.js",
+  "scripts": {
+    "build": "node-gyp build",
+    "test": "node --napi-modules ./test/test_bindings.js"
+  },
+  "gypfile": true,
+  "author": "Silvio Pardo",
+  "license": "ISC",
+  "dependencies": {
+    "node-addon-api": "^4.3.0"
+  }
+}
