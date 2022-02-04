@@ -1,6 +1,8 @@
 #include "batteryservice.h"
 using namespace Napi;
 
+BatteryService::BatteryService(const Napi::CallbackInfo& info) : ObjectWrap(info){};
+
 BatteryService::BatteryInfo BatteryService::getBatteryInfo(const HDEVINFO& hd_ev,
     SP_DEVICE_INTERFACE_DATA& sp_device) {
     
@@ -121,21 +123,33 @@ BatteryService::BatteryInfo BatteryService::getBatteryInfo(const HDEVINFO& hd_ev
 
 Napi::Value BatteryService::getBatteryList(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
-    //TODO return a vector of battery and catch all ex
+    //return a vector of battery and catch all ex
     try 
     {
-        std::vector<BatteryService::BatteryInfo> returnValue;
+        Napi::Object resultObject = Napi::Object::New(env);
         HDEVINFO hdev = SetupDiGetClassDevs(&GUID_DEVICE_BATTERY, 0, 0, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
         SP_DEVICE_INTERFACE_DATA did = { 0 };
         did.cbSize = sizeof(did);
         int counterIndex = 0;
         while(SetupDiEnumDeviceInterfaces(hdev, 0, &GUID_DEVICE_BATTERY, counterIndex, &did)) {
             BatteryService::BatteryInfo batteryData = this->getBatteryInfo(hdev, did);
-            if(!batteryData.errors)
-                returnValue.push_back(batteryData);
+            if(!batteryData.errors){
+                //temporary object
+                Napi::Object resultObjectTemp = Napi::Object::New(env);
+                resultObjectTemp.Set("DeviceName",batteryData.device_name);
+                resultObjectTemp.Set("DesignedCapacity",batteryData.designed_capacity);
+                resultObjectTemp.Set("FullChargedCapacity",batteryData.full_charged_capacity);
+                resultObjectTemp.Set("CycleCount",batteryData.cycle_count);
+                resultObjectTemp.Set("Voltage",batteryData.voltage);
+                resultObjectTemp.Set("Capacity",batteryData.capacity);
+                resultObjectTemp.Set("PowerState",batteryData.power_state);
+                resultObjectTemp.Set("Rate",batteryData.rate);
+                //save into result object
+                resultObject.Set(counterIndex, resultObjectTemp);
+            }
             counterIndex++;
         }
-        return Napi::Buffer<BatteryService::BatteryInfo>::Copy(env, returnValue.data(), returnValue.size());
+        return resultObject;
     }
     catch (...) {
         Napi::TypeError::New(env, "System Error!").ThrowAsJavaScriptException();

@@ -12,7 +12,7 @@
 class BatteryService : public Napi::ObjectWrap<BatteryService>
 {
 public:
-    BatteryService(const Napi::CallbackInfo& info) : ObjectWrap(info){};
+    BatteryService(const Napi::CallbackInfo& info);
     
     struct BatteryInfo {
         //error while retrieve infos of single battery
