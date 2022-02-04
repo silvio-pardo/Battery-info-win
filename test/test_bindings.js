@@ -1,6 +1,5 @@
 const BatteryService = require("../lib/bindings.js");
 const assert = require("assert");
-const ref = require('ref-napi');
 
 assert(BatteryService, "The expected module is undefined");
 
