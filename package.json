@@ -12,5 +12,8 @@
   "license": "ISC",
   "dependencies": {
     "node-addon-api": "^4.3.0"
-  }
+  },
+  "os":[
+    "win32"
+  ]
 }
