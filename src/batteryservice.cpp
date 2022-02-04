@@ -57,6 +57,7 @@ BatteryService::BatteryInfo BatteryService::getBatteryInfo(const HDEVINFO& hd_ev
                                 if (batteryInfo.Capabilities & BATTERY_SYSTEM_BATTERY) {
                                     returnValue.designed_capacity = batteryInfo.DesignedCapacity;
                                     returnValue.cycle_count = batteryInfo.CycleCount;
+                                    returnValue.full_charged_capacity = batteryInfo.FullChargedCapacity;
                                     
                                     // get the current battery capacity
                                     BATTERY_WAIT_STATUS bws = { 0 };
