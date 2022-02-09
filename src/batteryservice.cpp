@@ -158,12 +158,131 @@ Napi::Value BatteryService::getBatteryList(const Napi::CallbackInfo& info) {
     }
 }
 
+BatteryService::SystemInfo BatteryService::getSystemData() {
+    BatteryService::SystemInfo returnValue;
+    try {
+        HRESULT hres;
+        // declare the com smart pointer 
+        _COM_SMARTPTR_TYPEDEF(IWbemLocator, __uuidof(IWbemLocator));
+        _COM_SMARTPTR_TYPEDEF(IWbemServices, __uuidof(IWbemServices));
+        _COM_SMARTPTR_TYPEDEF(IWbemClassObject, __uuidof(IWbemClassObject));
+        _COM_SMARTPTR_TYPEDEF(IEnumWbemClassObject, __uuidof(IEnumWbemClassObject));
+        // Initialize COM
+        hres = CoInitializeEx(0, COINIT_APARTMENTTHREADED);
+        if (FAILED(hres))
+            throw std::exception("Unable to start the com");
+        // Initialize COM security...
+        hres = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, NULL);
+        if (FAILED(hres))
+        {
+            CoUninitialize();
+            throw std::exception("Unable to set the layer security");
+        }
+        // Instance specific CLSID
+        IWbemLocatorPtr spLocator;
+        hres = CoCreateInstance(CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&spLocator));
+        if (FAILED(hres))
+        {
+            CoUninitialize();
+            throw std::exception("Unable to create CLSID object");
+        }
+        // Connect to WbemService..
+        IWbemServicesPtr spServices;
+        hres = spLocator->ConnectServer(_bstr_t(L"root\\cimv2"), nullptr, nullptr, 0, 0, nullptr, nullptr, &spServices);
+        if (FAILED(hres))
+        {
+            // Destroy the pointer
+            if (bool(spLocator)) spLocator.Release();
+            CoUninitialize();
+            throw std::exception("Unable to connect to wbem service");
+        }
+        // Set Auth info for the specific connnect proxy wbem service
+        hres = CoSetProxyBlanket(spServices, RPC_C_AUTHN_DEFAULT, RPC_C_AUTHZ_DEFAULT, COLE_DEFAULT_PRINCIPAL,
+            RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, 0, EOAC_NONE);
+        if (FAILED(hres))
+        {
+            // Destroy the pointer
+            if (bool(spLocator)) spLocator.Release();
+            if (bool(spServices)) spServices.Release();
+            CoUninitialize();
+            throw std::exception("Unable to set auth info for the proxy");
+        }
+        // run query via WMI to obtain Win32_Computer­System object 
+        IEnumWbemClassObjectPtr spEnum;
+        hres = spServices->ExecQuery(_bstr_t(L"WQL"),
+            _bstr_t(L"select * from Win32_ComputerSystem"),
+            WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
+            nullptr, &spEnum);
+        if (FAILED(hres))
+        {
+            // Destroy the pointer
+            if (bool(spLocator)) spLocator.Release();
+            if (bool(spServices)) spServices.Release();
+            if (bool(spEnum)) spEnum.Release();
+            CoUninitialize();
+            throw std::exception("Unable to run the query");
+        }
+
+        IWbemClassObjectPtr spObject;
+        ULONG cActual;
+        while (spEnum->Next(WBEM_INFINITE, 1, &spObject, &cActual)
+            == WBEM_S_NO_ERROR) {
+            _variant_t var;
+            spObject->Get(L"Name", 0, &var, nullptr, nullptr);
+            returnValue.name = _bstr_t(var.bstrVal);
+            spObject->Get(L"Manufacturer", 0, &var, nullptr, nullptr);
+            returnValue.manufacturer = _bstr_t(var.bstrVal);
+            spObject->Get(L"Model", 0, &var, nullptr, nullptr);
+            returnValue.model = _bstr_t(var.bstrVal);
+            var.Clear();
+        }
+        //flush all..
+        if (bool(spLocator)) spLocator.Release();
+        if (bool(spServices)) spServices.Release();
+        if (bool(spEnum)) spEnum.Release();
+        if (bool(spObject)) spObject.Release();
+        CoUninitialize();
+        
+    }
+    catch (std::exception ex) {
+        //managed exception
+        returnValue.errors = true;
+    }
+    catch (...) {
+        //unmanaged
+        returnValue.errors = true;
+    }
+    return returnValue;
+}
+
+Napi::Value BatteryService::getSystemInfo(const Napi::CallbackInfo& info){
+    Napi::Env env = info.Env();
+    try 
+    {
+        Napi::Object resultObject = Napi::Object::New(env);
+        BatteryService::SystemInfo resData = this->getSystemData();
+        if(resData.errors)
+            throw std::exception("errore");
+        
+        resultObject.Set("Model", resData.model);
+        resultObject.Set("Name", resData.name);
+        resultObject.Set("Manufacturer", resData.manufacturer);
+
+        return resultObject;
+    }
+    catch (...) {
+        Napi::TypeError::New(env, "System Error!").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
 Napi::Function BatteryService::GetClass(Napi::Env env) {
   return DefineClass(
       env,
       "BatteryService",
       {
           BatteryService::InstanceMethod("getBatteryList", &BatteryService::getBatteryList),
+          BatteryService::InstanceMethod("getSystemInfo", &BatteryService::getSystemInfo)
       });
 }
 
