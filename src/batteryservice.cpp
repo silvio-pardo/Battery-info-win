@@ -90,7 +90,7 @@ BatteryService::BatteryInfo BatteryService::getBatteryInfo(const HDEVINFO& hd_ev
                                         &dwOut,
                                         NULL)) {
 
-                                        std::array<char, _MAX_PATH> buffer;
+                                        std::array<char, _MAX_PATH> buffer { NULL };
                                         
                                         int length = WideCharToMultiByte(
                                             CP_UTF8, 0,
@@ -98,7 +98,8 @@ BatteryService::BatteryInfo BatteryService::getBatteryInfo(const HDEVINFO& hd_ev
                                             buffer.data(), _MAX_PATH,
                                             NULL, NULL);
 
-                                        returnValue.device_name = std::string(buffer.data());
+                                        if(!buffer.empty())
+                                            returnValue.device_name = std::string(buffer.data());
                                     }
                                 }
                                 else
