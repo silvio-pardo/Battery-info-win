@@ -172,8 +172,9 @@ BatteryService::SystemInfo BatteryService::getSystemData() {
         if (FAILED(hres))
             throw std::exception("Unable to start the com");
         // Initialize COM security...
+        // if is open continue;
         hres = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, NULL);
-        if (FAILED(hres))
+        if (hres != RPC_E_TOO_LATE && FAILED(hres))
         {
             CoUninitialize();
             throw std::exception("Unable to set the layer security");
