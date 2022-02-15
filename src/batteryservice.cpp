@@ -230,13 +230,13 @@ BatteryService::SystemInfo BatteryService::getSystemData() {
             == WBEM_S_NO_ERROR) {
             _variant_t var;
             spObject->Get(L"Name", 0, &var, nullptr, nullptr);
-            returnValue.name = _bstr_t(var.bstrVal);
+            returnValue.name = var.bstrVal != NULL ? _bstr_t(var.bstrVal) : "";
             spObject->Get(L"Manufacturer", 0, &var, nullptr, nullptr);
-            returnValue.manufacturer = _bstr_t(var.bstrVal);
+            returnValue.manufacturer = var.bstrVal != NULL ? _bstr_t(var.bstrVal) : "";
             spObject->Get(L"Model", 0, &var, nullptr, nullptr);
-            returnValue.model = _bstr_t(var.bstrVal);
+            returnValue.model = var.bstrVal != NULL ? _bstr_t(var.bstrVal) : "";
             spObject->Get(L"ChassisSKUNumber", 0, &var, nullptr, nullptr);
-            returnValue.chassis_skku_number = _bstr_t(var.bstrVal);
+            returnValue.chassis_skku_number = var.bstrVal != NULL ? _bstr_t(var.bstrVal) : "";
             var.Clear();
         }
         // release the old data pointer.. 
@@ -264,7 +264,7 @@ BatteryService::SystemInfo BatteryService::getSystemData() {
             == WBEM_S_NO_ERROR) {
             _variant_t var;
             spObjectBios->Get(L"SerialNumber", 0, &var, nullptr, nullptr);
-            returnValue.serial_number = _bstr_t(var.bstrVal);
+            returnValue.serial_number = var.bstrVal != NULL ? _bstr_t(var.bstrVal) : "";
             var.Clear();
         }
 
