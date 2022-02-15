@@ -39,6 +39,8 @@ public:
 		std::string model;
 		std::string name;
 		std::string manufacturer;
+        std::string serial_number;
+        std::string chassis_skku_number;
 	};
 
     Napi::Value getBatteryList(const Napi::CallbackInfo&);

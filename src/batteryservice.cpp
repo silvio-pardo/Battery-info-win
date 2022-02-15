@@ -221,7 +221,7 @@ BatteryService::SystemInfo BatteryService::getSystemData() {
             if (bool(spServices)) spServices.Release();
             if (bool(spEnum)) spEnum.Release();
             CoUninitialize();
-            throw std::exception("Unable to run the query");
+            throw std::exception("Unable to run the query win32_computersystem");
         }
 
         IWbemClassObjectPtr spObject;
@@ -235,13 +235,44 @@ BatteryService::SystemInfo BatteryService::getSystemData() {
             returnValue.manufacturer = _bstr_t(var.bstrVal);
             spObject->Get(L"Model", 0, &var, nullptr, nullptr);
             returnValue.model = _bstr_t(var.bstrVal);
+            spObject->Get(L"ChassisSKUNumber", 0, &var, nullptr, nullptr);
+            returnValue.chassis_skku_number = _bstr_t(var.bstrVal);
             var.Clear();
         }
+        // release the old data pointer.. 
+        if (bool(spEnum)) spEnum.Release();
+        if (bool(spObject)) spObject.Release();
+        // Run query via WMI to obtain Win32_BIOS object
+        IEnumWbemClassObjectPtr spEnumBios;
+        hres = spServices->ExecQuery(_bstr_t(L"WQL"),
+            _bstr_t(L"select * from Win32_BIOS"),
+            WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
+            nullptr, &spEnumBios);
+        if (FAILED(hres))
+        {
+            // Destroy the pointer
+            if (bool(spLocator)) spLocator.Release();
+            if (bool(spServices)) spServices.Release();
+            if (bool(spEnumBios)) spEnumBios.Release();
+            CoUninitialize();
+            throw std::exception("Unable to run the query win32_bios");
+        }
+
+        IWbemClassObjectPtr spObjectBios;
+        ULONG cActualBios;
+        while (spEnumBios->Next(WBEM_INFINITE, 1, &spObjectBios, &cActualBios)
+            == WBEM_S_NO_ERROR) {
+            _variant_t var;
+            spObjectBios->Get(L"SerialNumber", 0, &var, nullptr, nullptr);
+            returnValue.serial_number = _bstr_t(var.bstrVal);
+            var.Clear();
+        }
+
         //flush all..
         if (bool(spLocator)) spLocator.Release();
         if (bool(spServices)) spServices.Release();
-        if (bool(spEnum)) spEnum.Release();
-        if (bool(spObject)) spObject.Release();
+        if (bool(spEnumBios)) spEnumBios.Release();
+        if (bool(spObjectBios)) spObjectBios.Release();
         CoUninitialize();
         
     }
@@ -268,6 +299,8 @@ Napi::Value BatteryService::getSystemInfo(const Napi::CallbackInfo& info){
         resultObject.Set("Model", resData.model);
         resultObject.Set("Name", resData.name);
         resultObject.Set("Manufacturer", resData.manufacturer);
+        resultObject.Set("ChassisSkku", resData.chassis_skku_number);
+        resultObject.Set("SerialNumber", resData.serial_number);
 
         return resultObject;
     }
